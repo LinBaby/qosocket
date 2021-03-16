@@ -12,4 +12,12 @@ extern zend_module_entry qosocket_module_entry;
 ZEND_TSRMLS_CACHE_EXTERN()
 # endif
 
+# define QS_HOST         "host"
+# define QS_HOST_LEN     4
+# define QS_DEFAULT_HOST "0.0.0.0"
+# define QS_PORT         "port"
+# define QS_PORT_LEN     4
+# define QS_DEFAULT_PORT 1215
+# define QS_IPPROTO      "ipproto"
+
 #endif	/* PHP_QOSOCKET_H */
