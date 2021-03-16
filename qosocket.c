@@ -17,14 +17,14 @@
 
 /* {{{ zend_class_entry
  */
-zend_class_entry *qst_p;
+zend_class_entry *qs_p;
 /* }}} */
 
-ZEND_BEGIN_ARG_INFO_EX(qst_ctor_args, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(qs_ctor_args, 0, 0, 1)
     ZEND_ARG_INFO(0, ipproto)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(qst_bind_args, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(qs_bind_args, 0, 0, 2)
     ZEND_ARG_INFO(0, host)
     ZEND_ARG_INFO(0, port)
 ZEND_END_ARN_INFO()
@@ -32,11 +32,11 @@ ZEND_END_ARN_INFO()
 PHP_METHOD(qosocket, __construct);
 PHP_METHOD(qosocket, bind);
 
-/* {{{ qst_methods[]
+/* {{{ qs_methods[]
  */
-const zend_function_entry qst_methods[] = {
-    PHP_ME(qosocket, __construct, qst_ctor_args, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR);
-    PHP_ME(qosocket, bind, qst_bind_args, ZEND_ACC_PUBLIC);
+const zend_function_entry qs_methods[] = {
+    PHP_ME(qosocket, __construct, qs_ctor_args, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR);
+    PHP_ME(qosocket, bind, qs_bind_args, ZEND_ACC_PUBLIC);
 }
 /* }}} */
 
@@ -55,9 +55,9 @@ PHP_MINIT_FUNCTION(qosocket)
  */
 void init_class()
 {
-    zend_class_entry qst;
-    INIT_CLASS_ENTRY(qst, "Qst\\Http\\Server", qst_methods);
-    qst_p = zend_register_internal_class(&qst TSRMLS_CC);
+    zend_class_entry qs;
+    INIT_CLASS_ENTRY(qs, "Qst\\Http\\Server", qs_methods);
+    qs_p = zend_register_internal_class(&qs TSRMLS_CC);
     // 创建host属性
     zend_declare_property_string(
         qsocket_p,
@@ -67,17 +67,11 @@ void init_class()
     );
     // 创建port属性
     zend_declare_property_long(
-        qst_p,
-        ZEND_STRL(QS_PORT),
-        QS_DEFAULT_PORT,
-        ZEND_ACC_PROTECTED
+        qs_p, ZEND_STRL(QS_PORT), QS_DEFAULT_PORT, ZEND_ACC_PROTECTED
     );
     // 创建ipproto
     zend_declare_property_long(
-        qst_p,
-        ZEND_STRL(QS_IPPROTO),
-        IPPROTO_TCP,
-        ZEND_ACC_PROTECTED
+        qs_p, ZEND_STRL(QS_IPPROTO), IPPROTO_TCP, ZEND_ACC_PROTECTED
     );
 }
 /* }}} */
@@ -87,12 +81,14 @@ void init_class()
 PHP_METHOD(qosocket, __construct)
 {
     long ipproto;
+
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_LONG(ipproto)
     ZEMD_PARSE_PARAMETERS_END();
+
     zend_update_proper_long(
-        qst_p, getThis(), ZEND_STR(QS_IPPROTO), ipproto
+        qs_p, getThis(), ZEND_STR(QS_IPPROTO), ipproto
     );
 }
 /* }}} */
@@ -112,11 +108,11 @@ PHP_METHOD(qosocket, bind)
     ZEND_PARSE_PARAMETERS_END();
 
     zend_update_property_string(
-        qst_p, this, QS_HOST, QS_HOST_LEN, host
+        qs_p, this, QS_HOST, QS_HOST_LEN, host
     );
 
     zend_update_property_long(
-        qst_p, this, QS_PORT, QS_PORT_LEN, port
+        qs_p, this, QS_PORT, QS_PORT_LEN, port
     );
 }
 /* }}} */
