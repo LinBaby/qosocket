@@ -1,0 +1,7 @@
+ARG_ENABLE('qosocket', 'qosocket support', 'no');
+
+if (PHP_QOSOCKET != 'no') {
+	AC_DEFINE('HAVE_QOSOCKET', 1, 'qosocket support enabled');
+
+	EXTENSION('qosocket', 'qosocket.c', null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+}
