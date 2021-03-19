@@ -4,9 +4,19 @@
 # include "config.h"
 #endif
 
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <string.h>
+#include <sys/wait.h>
+
 #include "php.h"
 #include "ext/standard/info.h"
 #include "php_qosocket.h"
+
+#include "wrap.h"
 
 /* For compatibility with older PHP versions */
 #ifndef ZEND_PARSE_PARAMETERS_NONE
@@ -31,16 +41,21 @@ ZEND_END_ARN_INFO()
 
 PHP_METHOD(qosocket, __construct);
 PHP_METHOD(qosocket, bind);
+PHP_METHOD(qosocket, run);
 
 /* {{{ qs_methods[]
  */
 const zend_function_entry qs_methods[] = {
     PHP_ME(qosocket, __construct, qs_ctor_args, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR);
     PHP_ME(qosocket, bind, qs_bind_args, ZEND_ACC_PUBLIC);
+    PHP_ME(qosocket, run, NULL, ZEND_ACC_PUBLIC);
 }
 /* }}} */
 
+// 初始化类
 void init_class();
+// 监听子进程,防止出现僵尸进程
+void wait_child(int signo);
 
 /* {{{ qosocket 类
  */
@@ -117,6 +132,78 @@ PHP_METHOD(qosocket, bind)
 }
 /* }}} */
 
+/* {{{ qosocket::run()
+ */
+PHP_METHOD(qosocket, run)
+{
+	pid_t pid;
+    int lfd, cfd;
+    struct sockaddr_in serv_addr, clnt_addr;
+    socklen_t clnt_addr_len;
+    char buf[128] = {0}, clnt_ip[128] = {0};
+    int n, i;
+
+    lfd = Socket(AF_INET, SOCK_STREAM, 0);
+
+    bzero(&serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(QS_PORT);
+    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    Bind(lfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
+    Listen(lfd, QS_LISTEN);
+
+    while (1) {
+        clnt_addr_len = sizeof(serv_addr);
+        cfd = Accept(lfd, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
+
+        printf("Clint IP:%s, port: %d \n", 
+            inet_ntop(
+                AF_INET, 
+                &clnt_addr.sin_addr.s_addr,
+                clnt_ip,
+                sizeof(clnt_ip)
+            ), 
+            ntohs(clnt_addr.sin_port)
+        );
+
+        pid = fork();
+        if (pid < 0) {
+            perr_exit("Fork error");
+        } else if (pid == 0) {
+            close(lfd);
+            break;
+        } else {
+            close(cfd);
+            signal(SIGCHLD, wait_child);
+        } // end if
+    } // end while
+
+    while (1) {
+       n = Read(cfd, buf, sizeof(buf));
+       if (n == 0) {
+           close(cfd);
+        return n;
+       } else if (n == -1) {
+           perr_exit("Read error");
+       } else {
+           for (i = 0; i < n; i++) {
+               buf[i] = toupper(buf[i]);
+           }
+           Write(cfd, buf, n);
+           Write(STDOUT_FILENO, buf, n);
+       } // end if
+    } // end while
+}
+/* }}} */
+
+void wait_child(int signo)
+{
+    while (waitpid(0, NULL, WNOHANG) > 0);
+    return ;
+}
+
 /* {{{ void qosocket_test1()
  */
 PHP_FUNCTION(qosocket_test1)
@@ -192,7 +279,7 @@ static const zend_function_entry qosocket_functions[] = {
 zend_module_entry qosocket_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"qosocket",                /* Extension name */
-    qosocket_functions,        /* zend_function_entry */
+        qosocket_functions,        /* zend_function_entry */
 	PHP_MINIT(qosocket),       /* PHP_MINIT - Module initialization */
 	NULL,                      /* PHP_MSHUTDOWN - Module shutdown */
 	PHP_RINIT(qosocket),       /* PHP_RINIT - Request initialization */
